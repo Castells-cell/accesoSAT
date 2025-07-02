@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Panel Admin - SAT</title>
+  <style>
+    body.admin-body {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+      background-color: #f5f7fa;
+      font-family: Arial, sans-serif;
+    }
+
+    .admin-container {
+      background: white;
+      padding: 30px 40px;
+      border-radius: 10px;
+      box-shadow: 0 0 15px rgba(0,0,0,0.2);
+      width: 400px;
+      max-width: 90vw;
+      text-align: left;
+    }
+
+    h2 {
+      color: #005daa;
+      margin-top: 0;
+      margin-bottom: 20px;
+      text-align: center;
+    }
+
+    #userList {
+      margin-top: 20px;
+      margin-bottom: 40px;
+      border-collapse: collapse;
+      width: 100%;
+    }
+    #userList th, #userList td {
+      border: 1px solid #ccc;
+      padding: 10px;
+      text-align: left;
+    }
+    #userList th {
+      background-color: #005daa;
+      color: white;
+    }
+
+    button {
+      background-color: #005daa;
+      color: white;
+      border: none;
+      padding: 8px 14px;
+      cursor: pointer;
+      border-radius: 4px;
+      transition: background-color 0.3s ease;
+    }
+    button:hover {
+      background-color: #003d73;
+    }
+
+    form {
+      margin-bottom: 20px;
+    }
+
+    input[type="text"],
+    input[type="password"] {
+      width: 100%;
+      padding: 8px;
+      margin-top: 6px;
+      margin-bottom: 14px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      box-sizing: border-box;
+      font-size: 16px;
+    }
+
+    #msg {
+      margin-bottom: 20px;
+      font-weight: bold;
+      color: red;
+      min-height: 20px;
+      text-align: center;
+    }
+  </style>
+</head>
+<body class="admin-body">
+  <div class="admin-container">
+    <h2>Panel de administración - SAT</h2>
+
+    <form id="addUserForm">
+      <label for="newUsername">Nuevo usuario:</label>
+      <input type="text" id="newUsername" name="newUsername" placeholder="Usuario" required />
+
+      <label for="newPassword">Contraseña:</label>
+      <input type="password" id="newPassword" name="newPassword" placeholder="Contraseña" required />
+
+      <button type="submit">Agregar usuario</button>
+    </form>
+
+    <div id="msg"></div>
+
+    <table id="userList">
+      <thead>
+        <tr><th>Usuario</th><th>Acción</th></tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <script>
+    const form = document.getElementById('addUserForm');
+    const userListTbody = document.querySelector('#userList tbody');
+    const msgDiv = document.getElementById('msg');
+
+    async function loadUsers() {
+      msgDiv.textContent = '';
+      try {
+        const res = await fetch('/users');
+        const users = await res.json();
+        userListTbody.innerHTML = '';
+        if (users.length === 0) {
+          userListTbody.innerHTML = '<tr><td colspan="2">No hay usuarios registrados.</td></tr>';
+          return;
+        }
+        users.forEach(u => {
+          const tr = document.createElement('tr');
+          tr.innerHTML = `
+            <td>${u.username}</td>
+            <td><button data-username="${u.username}">Eliminar</button></td>
+          `;
+          userListTbody.appendChild(tr);
+        });
+      } catch (e) {
+        msgDiv.textContent = 'Error al cargar usuarios.';
+      }
+    }
+
+    userListTbody.addEventListener('click', async (e) => {
+      if (e.target.tagName === 'BUTTON') {
+        const username = e.target.getAttribute('data-username');
+        if (!confirm(`¿Eliminar usuario "${username}"?`)) return;
+
+        try {
+          const res = await fetch(`/users/${username}`, { method: 'DELETE' });
+          if (res.ok) {
+            msgDiv.style.color = 'green';
+            msgDiv.textContent = `Usuario "${username}" eliminado.`;
+            loadUsers();
+          } else {
+            throw new Error('Error en la eliminación');
+          }
+        } catch {
+          msgDiv.style.color = 'red';
+          msgDiv.textContent = 'Error al eliminar usuario.';
+        }
+      }
+    });
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const username = form.newUsername.value.trim();
+      const password = form.newPassword.value.trim();
+
+      if (!username || !password) {
+        msgDiv.style.color = 'red';
+        msgDiv.textContent = 'Por favor ingresa usuario y contraseña.';
+        return;
+      }
+
+      try {
+        const res = await fetch('/users', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, password }),
+        });
+
+        if (res.status === 201) {
+          msgDiv.style.color = 'green';
+          msgDiv.textContent = `Usuario "${username}" agregado.`;
+          form.reset();
+          loadUsers();
+        } else {
+          throw new Error('Error al agregar');
+        }
+      } catch {
+        msgDiv.style.color = 'red';
+        msgDiv.textContent = 'Error al agregar usuario.';
+      }
+    });
+
+    loadUsers();
+  </script>
+</body>
+</html>
