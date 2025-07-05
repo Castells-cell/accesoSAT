@@ -16,7 +16,6 @@
     </form>
     <p id="error" class="error-msg"></p>
   </div>
-
   <script>
     document.getElementById("loginForm").addEventListener("submit", async (e) => {
       e.preventDefault();
@@ -31,8 +30,7 @@
       });
       const data = await res.json();
       if (data.success) {
-        sessionStorage.setItem('sesionIniciada', 'true'); // Marcamos sesión iniciada
-        window.location.href = data.redirect; // redirigir.html
+        window.location.href = data.redirect;
       } else {
         document.getElementById("error").innerText = data.message;
       }
